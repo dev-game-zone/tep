@@ -1,6 +1,7 @@
-export function generateLevels(level) {
+// Generates a level dynamically based on its index
+export function generateLevels(levelIndex) {
     const pentagons = [];
-    const gridSize = 3 + level; // grows each level
+    const gridSize = 3 + levelIndex; // grid grows each level
     const spacing = 60;
     const offsetX = 200;
     const offsetY = 150;
