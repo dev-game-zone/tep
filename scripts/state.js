@@ -39,3 +39,5 @@ export function checkGameSolvable() {
         setTimeout(() => alert("Game Over! Cannot complete the shape."), 10);
     }
 }
+
+export { checkGameSolvable as checkSolvable } from './solver.js';

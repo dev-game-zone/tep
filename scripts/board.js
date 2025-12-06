@@ -1,4 +1,4 @@
-import { targetPentagons, rackClusters, dragTarget, checkGameSolvable } from './state.js';
+import { targetPentagons, rackClusters, dragTarget, checkSolvable } from './state.js';
 import { PENT_SIZE, SNAP_TOLERANCE, rotatePoint } from './geometry.js';
 
 export function drawBoard(ctx) {
