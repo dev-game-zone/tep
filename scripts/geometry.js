@@ -1,8 +1,9 @@
+// geometry.js
 export const PENT_SIZE = 50;
 export const SNAP_TOLERANCE = 20;
 
-export function rotatePoint(x, y, angle) {
-    const rx = x * Math.cos(angle) - y * Math.sin(angle);
-    const ry = x * Math.sin(angle) + y * Math.cos(angle);
+export function rotatePoint(dx, dy, angle) {
+    const rx = dx * Math.cos(angle) - dy * Math.sin(angle);
+    const ry = dx * Math.sin(angle) + dy * Math.cos(angle);
     return [rx, ry];
 }

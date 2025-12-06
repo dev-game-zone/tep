@@ -1,20 +1,18 @@
-import { targetPentagons, rackClusters, tryPlaceCluster, checkSolvable, clusterPool } from './state.js';
+// board.js
+import { targetPentagons, rackClusters, tryPlaceCluster, checkSolvable } from './state.js';
 import { PENT_SIZE, rotatePoint } from './geometry.js';
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-
-// --- Local drag target ---
 let dragTarget = null;
 
-// --- Mouse Events ---
+// --- Drag and rotate ---
 canvas.addEventListener('mousedown', e => {
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
-
-    for (let cl of rackClusters) {
-        for (let idx of cl.cells) {
+    for (const cl of rackClusters) {
+        for (const idx of cl.cells) {
             const dx = cl.x - mx;
             const dy = cl.y - my;
             if (Math.hypot(dx, dy) < PENT_SIZE) {
@@ -35,14 +33,20 @@ canvas.addEventListener('mousemove', e => {
     dragTarget.y = e.clientY - rect.top - dragTarget.offsetY;
 });
 
-// Mouse wheel rotation
+canvas.addEventListener('mouseup', () => {
+    if (!dragTarget) return;
+    dragTarget.dragging = false;
+    tryPlaceCluster(dragTarget);
+    checkSolvable();
+    dragTarget = null;
+});
+
 canvas.addEventListener('wheel', e => {
     if (!dragTarget) return;
     e.preventDefault();
     dragTarget.rotation += e.deltaY > 0 ? 0.1 : -0.1;
 });
 
-// Keyboard rotation
 document.addEventListener('keydown', e => {
     if (!dragTarget) return;
     if (e.key === 'ArrowUp') dragTarget.rotation += 0.1;
@@ -50,34 +54,6 @@ document.addEventListener('keydown', e => {
 });
 
 // --- Drawing ---
-export function drawBoard(ctx) {
-    targetPentagons.forEach(p => {
-        drawPentagon(ctx, p.x, p.y, PENT_SIZE, p.placed ? '#44aa44' : '#333333');
-    });
-}
-
-export function drawClusters(ctx) {
-    rackClusters.forEach(cl => {
-        cl.cells.forEach((idx) => {
-            const dx = targetPentagons[idx].x - targetPentagons[cl.cells[0]].x;
-            const dy = targetPentagons[idx].y - targetPentagons[cl.cells[0]].y;
-            const [rx, ry] = rotatePoint(dx, dy, cl.rotation || 0);
-            const px = cl.x + rx;
-            const py = cl.y + ry;
-            drawPentagon(ctx, px, py, PENT_SIZE, cl.dragging ? '#ffff00' : '#ffaa44');
-        });
-    });
-}
-
-canvas.addEventListener('mouseup', () => {
-    if (!dragTarget) return;
-    dragTarget.dragging = false;
-    tryPlaceCluster(dragTarget); // attempts to place cluster
-    dragTarget = null;
-
-    checkSolvable(); // <--- must be called here
-});
-
 export function drawPentagon(ctx, x, y, size, color = '#4da6ff') {
     const angle = 2 * Math.PI / 5;
     ctx.beginPath();
@@ -93,22 +69,19 @@ export function drawPentagon(ctx, x, y, size, color = '#4da6ff') {
     ctx.stroke();
 }
 
-export function drawUI(ctx, score, level, difficulty) {
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '20px sans-serif';
-    ctx.fillText('Score: ' + score, 20, 30);
-    ctx.fillText('Level: ' + (level + 1), 20, 60);
-    ctx.fillText('Difficulty: ' + difficulty, 20, 90);
+export function drawBoard(ctx) {
+    targetPentagons.forEach(p => drawPentagon(ctx, p.x, p.y, PENT_SIZE, p.placed ? '#44aa44' : '#333333'));
 }
 
-export let showPrompt = true;
-setTimeout(() => showPrompt = false, 10000);
-
-export function drawPrompt(ctx) {
-    if (!showPrompt) return;
-    ctx.fillStyle = 'rgba(0,0,0,0.7)';
-    ctx.fillRect(400, 20, 380, 50);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '16px sans-serif';
-    ctx.fillText('Tip: Rotate cluster with mouse wheel or ↑/↓ keys.', 410, 45);
+export function drawClusters(ctx) {
+    rackClusters.forEach(cl => {
+        cl.cells.forEach(idx => {
+            const dx = targetPentagons[idx].x - targetPentagons[cl.cells[0]].x;
+            const dy = targetPentagons[idx].y - targetPentagons[cl.cells[0]].y;
+            const [rx, ry] = rotatePoint(dx, dy, cl.rotation || 0);
+            const px = cl.x + rx;
+            const py = cl.y + ry;
+            drawPentagon(ctx, px, py, PENT_SIZE, cl.dragging ? '#ffff00' : '#ffaa44');
+        });
+    });
 }
