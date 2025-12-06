@@ -1,4 +1,4 @@
-export function generateLevel(level) {
+export function generateLevels(level) {
     const pentagons = [];
     const gridSize = 3 + level; // grows each level
     const spacing = 60;
