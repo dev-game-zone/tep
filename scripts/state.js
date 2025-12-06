@@ -165,4 +165,4 @@ export function checkSolvable() {
 }
 
 // --- Final exports ---
-export { rackClusters, clusterPool, usedClusters, dragTarget, loadLevel, spawnNewBatch, tryPlaceCluster, checkSolvable };
+export { usedClusters, dragTarget, loadLevel, spawnNewBatch, tryPlaceCluster, checkSolvable };
