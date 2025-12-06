@@ -19,15 +19,19 @@ export let currentLevel = 0;
 
 // --- Initialize clusters ---
 export function initClusters() {
+    const maxIdx = targetPentagons.length - 1;
+
+    // Create clusters but only include valid indices
     clusterPool = [
         { cells: [0], rotation: 0 },
         { cells: [1], rotation: 0 },
-        { cells: [2], rotation: 0 },
-        { cells: [3, 4], rotation: 0 },
-        { cells: [5, 6], rotation: 0 },
-        { cells: [7, 8, 9], rotation: 0 },
+        { cells: [0, 1], rotation: 0 },
         { cells: [0, 1, 2], rotation: 0 }
-    ];
+    ].map(c => ({
+        cells: c.cells.filter(idx => idx <= maxIdx),
+        rotation: 0
+    })).filter(c => c.cells.length > 0);
+
     rackClusters = [];
     usedClusters = [];
     spawnNewBatch();
@@ -52,16 +56,24 @@ export function spawnNewBatch() {
 export function loadLevel(levelIndex) {
     targetPentagons = generateLevels(levelIndex).map(p => ({ x: p.x, y: p.y, placed: false }));
     initClusters();
+    totalScore = 0;
 }
 
 // --- Try placing a cluster on the board ---
 export function tryPlaceCluster(cluster) {
+    if (!cluster || !cluster.cells || cluster.cells.length === 0) return;
+
     const firstIdx = cluster.cells[0];
     let clusterFits = true;
     const closestTargets = [];
 
     for (const idx of cluster.cells) {
         const cell = targetPentagons[idx];
+        if (!cell) {
+            clusterFits = false;
+            break;
+        }
+
         const dx0 = cell.x - targetPentagons[firstIdx].x;
         const dy0 = cell.y - targetPentagons[firstIdx].y;
         const angle = cluster.rotation || 0;
@@ -77,7 +89,7 @@ export function tryPlaceCluster(cluster) {
             const d = Math.hypot(px - t.x, py - t.y);
             if (d < minDist) { minDist = d; nearest = t; }
         }
-        if (minDist > SNAP_TOLERANCE) clusterFits = false;
+        if (!nearest || minDist > SNAP_TOLERANCE) clusterFits = false;
         closestTargets.push(nearest);
     }
 
@@ -86,8 +98,9 @@ export function tryPlaceCluster(cluster) {
         let clusterPoints = 0;
         for (let i = 0; i < cluster.cells.length; i++) {
             const t = closestTargets[i];
+            if (!t) continue;
             t.placed = true;
-            clusterPoints += 10; // scoring per pentagon
+            clusterPoints += 10;
         }
         totalScore += clusterPoints;
 
@@ -99,7 +112,7 @@ export function tryPlaceCluster(cluster) {
             spawnNewBatch();
         }
     } else {
-        // snap back to original position
+        // snap back
         cluster.x = cluster.origX;
         cluster.y = cluster.origY;
         cluster.rotation = 0;
@@ -139,6 +152,8 @@ export function checkSolvable() {
                     for (let j = 0; j < cl.cells.length; j++) {
                         const base = targetPentagons[cl.cells[0]];
                         const cell = targetPentagons[cl.cells[j]];
+                        if (!cell) { fits = false; break; }
+
                         const dx0 = cell.x - base.x;
                         const dy0 = cell.y - base.y;
                         const dx = dx0 * Math.cos(angle) - dy0 * Math.sin(angle);

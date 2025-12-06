@@ -1,4 +1,3 @@
-// board.js
 import { targetPentagons, rackClusters, tryPlaceCluster, checkSolvable } from './state.js';
 import { PENT_SIZE, rotatePoint } from './geometry.js';
 
@@ -12,7 +11,10 @@ canvas.addEventListener('mousedown', e => {
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
     for (const cl of rackClusters) {
-        for (const idx of cl.cells) {
+        const validCells = cl.cells.filter(idx => targetPentagons[idx]);
+        if (validCells.length === 0) continue;
+
+        for (const idx of validCells) {
             const dx = cl.x - mx;
             const dy = cl.y - my;
             if (Math.hypot(dx, dy) < PENT_SIZE) {
@@ -75,9 +77,14 @@ export function drawBoard(ctx) {
 
 export function drawClusters(ctx) {
     rackClusters.forEach(cl => {
-        cl.cells.forEach(idx => {
-            const dx = targetPentagons[idx].x - targetPentagons[cl.cells[0]].x;
-            const dy = targetPentagons[idx].y - targetPentagons[cl.cells[0]].y;
+        const validCells = cl.cells.filter(idx => targetPentagons[idx]);
+        if (validCells.length === 0) return;
+
+        validCells.forEach(idx => {
+            const base = targetPentagons[cl.cells[0]];
+            const cell = targetPentagons[idx];
+            const dx = cell.x - base.x;
+            const dy = cell.y - base.y;
             const [rx, ry] = rotatePoint(dx, dy, cl.rotation || 0);
             const px = cl.x + rx;
             const py = cl.y + ry;
