@@ -40,4 +40,4 @@ export function checkGameSolvable() {
     }
 }
 
-export { checkGameSolvable as checkSolvable } from './solver.js';
+export { checkGameSolvable as checkSolvable };
