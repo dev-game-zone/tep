@@ -1,8 +1,11 @@
-import { targetPentagons, rackClusters, dragTarget, tryPlaceCluster } from './state.js';
-import { PENT_SIZE, SNAP_TOLERANCE, rotatePoint } from './geometry.js';
+import { targetPentagons, rackClusters, tryPlaceCluster } from './state.js';
+import { PENT_SIZE, rotatePoint } from './geometry.js';
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+
+// --- Local drag target ---
+let dragTarget = null;
 
 // --- Mouse Events ---
 canvas.addEventListener('mousedown', e => {
@@ -12,7 +15,6 @@ canvas.addEventListener('mousedown', e => {
 
     for (let cl of rackClusters) {
         for (let idx of cl.cells) {
-            const pent = targetPentagons[idx];
             const dx = cl.x - mx;
             const dy = cl.y - my;
             if (Math.hypot(dx, dy) < PENT_SIZE) {
