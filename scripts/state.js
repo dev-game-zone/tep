@@ -127,13 +127,6 @@ export function checkSolvable() {
     if (empty.length === 0) return;
 
     const allClusters = [...rackClusters, ...clusterPool];
-    const totalCellsLeft = allClusters.reduce((sum, cl) => sum + cl.cells.length, 0);
-
-    // Only trigger game over if there is truly no way to fill
-    if (totalCellsLeft < empty.length) {
-        setTimeout(() => alert("Game Over! Cannot complete the shape."), 10);
-        return;
-    }
 
     function canFill(empties, clusters) {
         if (empties.length === 0) return true;
@@ -178,8 +171,12 @@ export function checkSolvable() {
         return false;
     }
 
+    // Only alert if truly impossible
     if (!canFill(empty.slice(), allClusters.slice())) {
-        // Only alert when truly unsolvable
-        setTimeout(() => alert("Game Over! Cannot complete the shape."), 10);
+        // Optional: only alert if the player has placed at least one cluster
+        if (usedClusters.length > 0) {
+            setTimeout(() => alert("Game Over! Cannot complete the shape."), 10);
+        }
     }
 }
+
