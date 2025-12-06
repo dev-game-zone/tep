@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>EUDOXIA Prototype - Fixed Solvability</title>
+<title>EUDOXIA Prototype - Visual Fixes</title>
 <style>
   body { margin:0; background:#202020; font-family:sans-serif; }
   canvas { display:block; margin:0 auto; background:#181818; }
@@ -11,12 +11,14 @@
 <body>
 <canvas id="game" width="800" height="600"></canvas>
 <script>
+/* EUDOXIA prototype - fixed solvability check for rack-only clusters */
+
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 const PENT_SIZE = 50;
-const SNAP_TOLERANCE = 25; // increased for forgiving placement
-const ROTATION_STEPS = 16; // used by solver
+const SNAP_TOLERANCE = 20; 
+const ROTATION_STEPS = 16;
 let totalScore = 0;
 let currentLevel = 0;
 let levels = [];
@@ -42,7 +44,7 @@ let rackClusters = [];
 let usedClusters = [];
 let dragTarget = null;
 
-// ----- Draw Pentagon -----
+// ----- Draw pentagon -----
 function drawPentagon(x,y,size, fillColor="#4da6ff", faceRotation=0, strokeColor="#000", strokeWidth=1, alpha=1.0){
     const angle = 2*Math.PI/5;
     ctx.save();
@@ -66,11 +68,11 @@ function drawPentagon(x,y,size, fillColor="#4da6ff", faceRotation=0, strokeColor
     ctx.restore();
 }
 
-// ----- Draw target & clusters -----
+// ----- Draw board & clusters -----
 function drawTarget(){
     for(const p of targetPentagons){
         const color = p.placed ? "#44aa44" : "#333333";
-        drawPentagon(p.x, p.y, PENT_SIZE, color);
+        drawPentagon(p.x, p.y, PENT_SIZE, color, 0, "#000", 1, 1.0);
     }
 }
 
@@ -94,7 +96,7 @@ function drawClusters(){
     }
 }
 
-// ----- UI -----
+// ----- UI & prompt -----
 function drawUI(difficulty){
     ctx.fillStyle="#ffffff";
     ctx.font="18px sans-serif";
@@ -141,7 +143,7 @@ function spawnNewBatch(){
     }
 }
 
-// ----- Drag & rotate -----
+// ----- Drag, rotate input -----
 canvas.addEventListener("mousedown", e=>{
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
@@ -171,25 +173,23 @@ canvas.addEventListener("mousedown", e=>{
 canvas.addEventListener("mousemove", e=>{
     if(!dragTarget) return;
     const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    dragTarget.x = mx - dragTarget.offsetX;
-    dragTarget.y = my - dragTarget.offsetY;
+    dragTarget.x = e.clientX - rect.left - dragTarget.offsetX;
+    dragTarget.y = e.clientY - rect.top - dragTarget.offsetY;
 });
 
 canvas.addEventListener("wheel", e=>{
     if(!dragTarget) return;
     e.preventDefault();
-    dragTarget.rotation = (dragTarget.rotation || 0) + (e.deltaY>0 ? 0.12 : -0.12);
+    dragTarget.rotation = (dragTarget.rotation || 0) + (e.deltaY > 0 ? 0.12 : -0.12);
 });
 
 document.addEventListener("keydown", e=>{
     if(!dragTarget) return;
-    if(e.key==="ArrowUp") dragTarget.rotation = (dragTarget.rotation||0) + 0.12;
-    if(e.key==="ArrowDown") dragTarget.rotation = (dragTarget.rotation||0) - 0.12;
+    if(e.key === "ArrowUp") dragTarget.rotation = (dragTarget.rotation || 0) + 0.12;
+    if(e.key === "ArrowDown") dragTarget.rotation = (dragTarget.rotation || 0) - 0.12;
 });
 
-// ----- Placement -----
+// ----- Placement & snapping -----
 canvas.addEventListener("mouseup", e=>{
     if(!dragTarget) return;
     const firstIdx = dragTarget.cells[0];
@@ -210,10 +210,10 @@ canvas.addEventListener("mouseup", e=>{
         let minDist = Infinity;
         for(const t of targetPentagons){
             if(t.placed) continue;
-            const d = Math.hypot(px-t.x, py-t.y);
-            if(d<minDist){ minDist=d; nearest=t; }
+            const d = Math.hypot(px - t.x, py - t.y);
+            if(d < minDist){ minDist = d; nearest = t; }
         }
-        if(minDist>SNAP_TOLERANCE) clusterFits=false;
+        if(minDist > SNAP_TOLERANCE) clusterFits = false;
         closestTargets.push(nearest);
     }
 
@@ -228,17 +228,17 @@ canvas.addEventListener("mouseup", e=>{
         totalScore += clusterPoints;
 
         const ridx = rackClusters.indexOf(dragTarget);
-        if(ridx!==-1) rackClusters.splice(ridx,1);
+        if(ridx !== -1) rackClusters.splice(ridx,1);
         usedClusters.push(dragTarget);
-        if(rackClusters.length===0 && clusterPool.length>0) spawnNewBatch();
 
-        // ✅ only check solvable after successful placement
-        checkSolvable();
+        if(rackClusters.length === 0 && clusterPool.length>0) spawnNewBatch();
     } else {
         dragTarget.x = dragTarget.origX;
         dragTarget.y = dragTarget.origY;
         dragTarget.rotation = 0;
     }
+
+    checkSolvable();
 
     if(targetPentagons.every(p=>p.placed)){
         if(currentLevel+1>=levels.length){
@@ -249,18 +249,19 @@ canvas.addEventListener("mouseup", e=>{
         }
     }
 
-    dragTarget.dragging=false;
-    dragTarget=null;
+    dragTarget.dragging = false;
+    dragTarget = null;
 });
 
-// ----- Hybrid solver -----
+// ----- Hybrid solver: rack-only -----
 function checkSolvable(){
     const empty = targetPentagons.filter(p=>!p.placed);
     if(empty.length===0) return;
 
-    const allClusters = [...rackClusters,...clusterPool];
+    // IMPORTANT CHANGE: only consider currently visible rack clusters
+    const allClusters = [...rackClusters];
     const totalCellsLeft = allClusters.reduce((s,c)=>s+c.cells.length,0);
-    if(totalCellsLeft < empty.length+1){ // require at least 1 extra cluster to avoid false alert
+    if(totalCellsLeft < empty.length){
         setTimeout(()=> alert("Game Over! Cannot complete the shape."),10);
         return;
     }
@@ -276,13 +277,13 @@ function checkSolvable(){
             for(const start of empties){
                 for(let r=0;r<ROTATION_STEPS;r++){
                     const angle = (2*Math.PI/ROTATION_STEPS)*r;
-                    let fits=true;
-                    const matched=[];
+                    let fits = true;
+                    const matched = [];
                     for(let j=0;j<cl.cells.length;j++){
                         const base = targetPentagons[cl.cells[0]];
                         const cell = targetPentagons[cl.cells[j]];
-                        const dx0 = cell.x-base.x;
-                        const dy0 = cell.y-base.y;
+                        const dx0 = cell.x - base.x;
+                        const dy0 = cell.y - base.y;
                         const dx = dx0*Math.cos(angle) - dy0*Math.sin(angle);
                         const dy = dx0*Math.sin(angle) + dy0*Math.cos(angle);
                         const px = start.x + dx;
@@ -301,8 +302,9 @@ function checkSolvable(){
         return false;
     }
 
-    const solvable = canFill(empty.slice(), allClusters.slice());
-    if(!solvable) setTimeout(()=> alert("Game Over! Cannot complete the shape."),10);
+    if(!canFill(empty.slice(), allClusters.slice())){
+        setTimeout(()=> alert("Game Over! Cannot complete the shape."),10);
+    }
 }
 
 // ----- Dynamic difficulty -----
@@ -312,7 +314,7 @@ function getDifficulty(){
     const anyPlaced = targetPentagons.some(p=>p.placed);
     if(!anyPlaced) return "Easy";
     const remainingClusters = [...rackClusters];
-    let scarcitySum=0;
+    let scarcitySum = 0;
     for(const t of empty){
         let validClusters=0;
         for(const cl of remainingClusters){
@@ -323,15 +325,13 @@ function getDifficulty(){
                 for(let i=0;i<cl.cells.length;i++){
                     const base = targetPentagons[cl.cells[0]];
                     const cell = targetPentagons[cl.cells[i]];
-                    const dx0 = cell.x-base.x;
-                    const dy0 = cell.y-base.y;
-                    const dx = dx0*Math.cos(angle) - dy0*Math.sin(angle);
-                    const dy = dx0*Math.sin(angle) + dy0*Math.cos(angle);
-                    const px = t.x + dx;
-                    const py = t.y + dy;
-                    if(!empty.some(e=>Math.hypot(px-e.x,py-e.y)<=SNAP_TOLERANCE)){ ok=false; break; }
+                    const dx0 = cell.x - base.x;
+                    const dy0 = cell.y - base.y;
+                    const dx = t.x + dx0;
+                    const dy = t.y + dy0;
+                    if(!empty.some(e=>Math.hypot(dx-e.x,dy-e.y)<=SNAP_TOLERANCE)){ ok=false; break; }
                 }
-                if(ok){ clusterWorks=true; break; }
+                if(ok) { clusterWorks=true; break; }
             }
             if(clusterWorks) validClusters++;
         }
@@ -344,9 +344,9 @@ function getDifficulty(){
     return "Extreme";
 }
 
-// ----- Level load -----
+// ----- Load level -----
 function loadLevel(level){
-    targetPentagons = levels[level].map(p=>({x:p.x, y:p.y, placed:false}));
+    targetPentagons = levels[level].map(p=>({x:p.x,y:p.y,placed:false}));
     initClusterPool();
 }
 
@@ -363,6 +363,7 @@ function loop(){
 // ----- Start -----
 loadLevel(currentLevel);
 loop();
+
 </script>
 </body>
 </html>
