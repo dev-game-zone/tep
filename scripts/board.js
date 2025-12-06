@@ -1,4 +1,4 @@
-import { targetPentagons, rackClusters, tryPlaceCluster } from './state.js';
+import { targetPentagons, rackClusters, tryPlaceCluster, checkSolvable, clusterPool } from './state.js';
 import { PENT_SIZE, rotatePoint } from './geometry.js';
 
 const canvas = document.getElementById('gameCanvas');
@@ -35,13 +35,6 @@ canvas.addEventListener('mousemove', e => {
     dragTarget.y = e.clientY - rect.top - dragTarget.offsetY;
 });
 
-canvas.addEventListener('mouseup', () => {
-    if (!dragTarget) return;
-    dragTarget.dragging = false;
-    tryPlaceCluster(dragTarget);
-    dragTarget = null;
-});
-
 // Mouse wheel rotation
 canvas.addEventListener('wheel', e => {
     if (!dragTarget) return;
@@ -75,6 +68,15 @@ export function drawClusters(ctx) {
         });
     });
 }
+
+canvas.addEventListener('mouseup', () => {
+    if (!dragTarget) return;
+    dragTarget.dragging = false;
+    tryPlaceCluster(dragTarget); // attempts to place cluster
+    dragTarget = null;
+
+    checkSolvable(); // <--- must be called here
+});
 
 export function drawPentagon(ctx, x, y, size, color = '#4da6ff') {
     const angle = 2 * Math.PI / 5;
