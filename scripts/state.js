@@ -163,6 +163,3 @@ export function checkSolvable() {
         setTimeout(() => alert("Game Over! Cannot complete the shape."), 10);
     }
 }
-
-// --- Final exports ---
-export { checkSolvable };
