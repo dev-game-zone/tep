@@ -13,6 +13,10 @@ export let dragTarget = null;
 export const PENT_SIZE = 50;
 export const SNAP_TOLERANCE = 20;
 
+// Game tracking
+export let totalScore = 0;
+export let currentLevel = 0;
+
 // --- Initialize clusters ---
 export function initClusters() {
     clusterPool = [
@@ -29,7 +33,7 @@ export function initClusters() {
     spawnNewBatch();
 }
 
-// --- Spawn clusters into the rack ---
+// --- Spawn up to 3 clusters into the rack ---
 export function spawnNewBatch() {
     if (rackClusters.length > 0) return; // only spawn if empty
     for (let i = 0; i < 3 && clusterPool.length > 0; i++) {
@@ -50,10 +54,8 @@ export function loadLevel(levelIndex) {
     initClusters();
 }
 
-// --- Attempt to place a cluster ---
+// --- Try placing a cluster on the board ---
 export function tryPlaceCluster(cluster) {
-    if (!cluster) return;
-
     const firstIdx = cluster.cells[0];
     let clusterFits = true;
     const closestTargets = [];
@@ -80,16 +82,15 @@ export function tryPlaceCluster(cluster) {
     }
 
     if (clusterFits) {
-        // Commit placement
+        // commit placement
         let clusterPoints = 0;
         for (let i = 0; i < cluster.cells.length; i++) {
             const t = closestTargets[i];
-            if (!t) continue;
             t.placed = true;
-            // simple scoring: 10 points per pentagon
-            clusterPoints += 10;
+            clusterPoints += 10; // scoring per pentagon
         }
-        // Update score externally (board/main should add clusterPoints)
+        totalScore += clusterPoints;
+
         const ridx = rackClusters.indexOf(cluster);
         if (ridx !== -1) rackClusters.splice(ridx, 1);
         usedClusters.push(cluster);
@@ -98,7 +99,7 @@ export function tryPlaceCluster(cluster) {
             spawnNewBatch();
         }
     } else {
-        // Snap back
+        // snap back to original position
         cluster.x = cluster.origX;
         cluster.y = cluster.origY;
         cluster.rotation = 0;
@@ -123,7 +124,7 @@ export function checkSolvable() {
         if (empties.length === 0) return true;
         if (clusters.length === 0) return false;
 
-        clusters.sort((a, b) => b.cells.length - a.cells.length);
+        clusters.sort((a, b) => b.cells.length - a.cells.length); // try larger clusters first
 
         for (let i = 0; i < clusters.length; i++) {
             const cl = clusters[i];
@@ -163,3 +164,6 @@ export function checkSolvable() {
         setTimeout(() => alert("Game Over! Cannot complete the shape."), 10);
     }
 }
+
+// --- Exports ---
+export { currentLevel };
