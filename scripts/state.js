@@ -13,7 +13,7 @@ export let dragTarget = null;
 export const PENT_SIZE = 50;
 export const SNAP_TOLERANCE = 20;
 
-// Initialize clusters
+// --- Initialize clusters ---
 export function initClusters() {
     clusterPool = [
         { cells: [0], rotation: 0 },
@@ -29,7 +29,7 @@ export function initClusters() {
     spawnNewBatch();
 }
 
-// Spawn up to 3 clusters into the rack
+// --- Spawn clusters into the rack ---
 export function spawnNewBatch() {
     if (rackClusters.length > 0) return; // only spawn if empty
     for (let i = 0; i < 3 && clusterPool.length > 0; i++) {
@@ -50,6 +50,63 @@ export function loadLevel(levelIndex) {
     initClusters();
 }
 
+// --- Attempt to place a cluster ---
+export function tryPlaceCluster(cluster) {
+    if (!cluster) return;
+
+    const firstIdx = cluster.cells[0];
+    let clusterFits = true;
+    const closestTargets = [];
+
+    for (const idx of cluster.cells) {
+        const cell = targetPentagons[idx];
+        const dx0 = cell.x - targetPentagons[firstIdx].x;
+        const dy0 = cell.y - targetPentagons[firstIdx].y;
+        const angle = cluster.rotation || 0;
+        const dx = dx0 * Math.cos(angle) - dy0 * Math.sin(angle);
+        const dy = dx0 * Math.sin(angle) + dy0 * Math.cos(angle);
+        const px = cluster.x + dx;
+        const py = cluster.y + dy;
+
+        let nearest = null;
+        let minDist = Infinity;
+        for (const t of targetPentagons) {
+            if (t.placed) continue;
+            const d = Math.hypot(px - t.x, py - t.y);
+            if (d < minDist) { minDist = d; nearest = t; }
+        }
+        if (minDist > SNAP_TOLERANCE) clusterFits = false;
+        closestTargets.push(nearest);
+    }
+
+    if (clusterFits) {
+        // Commit placement
+        let clusterPoints = 0;
+        for (let i = 0; i < cluster.cells.length; i++) {
+            const t = closestTargets[i];
+            if (!t) continue;
+            t.placed = true;
+            // simple scoring: 10 points per pentagon
+            clusterPoints += 10;
+        }
+        // Update score externally (board/main should add clusterPoints)
+        const ridx = rackClusters.indexOf(cluster);
+        if (ridx !== -1) rackClusters.splice(ridx, 1);
+        usedClusters.push(cluster);
+
+        if (rackClusters.length === 0 && clusterPool.length > 0) {
+            spawnNewBatch();
+        }
+    } else {
+        // Snap back
+        cluster.x = cluster.origX;
+        cluster.y = cluster.origY;
+        cluster.rotation = 0;
+    }
+
+    checkSolvable();
+}
+
 // --- Hybrid solvability check ---
 export function checkSolvable() {
     const empty = targetPentagons.filter(p => !p.placed);
@@ -62,19 +119,18 @@ export function checkSolvable() {
         return;
     }
 
-    // Recursive check
     function canFill(empties, clusters) {
         if (empties.length === 0) return true;
         if (clusters.length === 0) return false;
 
-        clusters.sort((a, b) => b.cells.length - a.cells.length); // try bigger clusters first
+        clusters.sort((a, b) => b.cells.length - a.cells.length);
 
         for (let i = 0; i < clusters.length; i++) {
             const cl = clusters[i];
             const rest = clusters.slice(0, i).concat(clusters.slice(i + 1));
 
             for (const start of empties) {
-                for (let r = 0; r < 16; r++) { // simulate rotations
+                for (let r = 0; r < 16; r++) {
                     const angle = (2 * Math.PI / 16) * r;
                     let fits = true;
                     const matched = [];
@@ -108,4 +164,5 @@ export function checkSolvable() {
     }
 }
 
-export { targetPentagons, rackClusters, clusterPool, checkSolvable, tryPlaceCluster, loadLevel, spawnNewBatch };
+// --- Final exports ---
+export { targetPentagons, rackClusters, clusterPool, usedClusters, dragTarget, loadLevel, spawnNewBatch, tryPlaceCluster, checkSolvable };
