@@ -1,4 +1,4 @@
-import { loadLevel, initClusters, spawnNewBatch, checkSolvable } from './state.js';
+import { loadLevel, spawnNewBatch } from './state.js';
 import { drawBoard, drawClusters, drawUI, drawPrompt } from './board.js';
 import { getDifficulty } from './difficulty.js';
 
@@ -18,8 +18,8 @@ function gameLoop() {
 }
 
 // Initialize first level
-loadLevel(currentLevel);
-initClusters();
+loadLevel(currentLevel);  // loads targetPentagons and clusterPool
+spawnNewBatch();           // spawns first batch of clusters in rack
 
 // Start game loop
 gameLoop();
